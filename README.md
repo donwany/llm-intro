@@ -197,8 +197,10 @@ With reasoning:
 
 
 ## Transformer Architecture
+- DONE
 
 ## Tokenization
+- DONE
 
 ## Pretrained Models
 
@@ -213,3 +215,4 @@ With reasoning:
 - https://www.promptingguide.ai/introduction
 - https://arxiv.org/pdf/1706.03762
 - https://jalammar.github.io/illustrated-transformer/
+- https://github.com/openai/tiktoken

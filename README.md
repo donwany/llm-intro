@@ -203,6 +203,11 @@ With reasoning:
 - DONE
 
 ## Pretrained Models
+```
+uv add huggingface_hub transformers torch
+
+export HF_TOKEN=<your Hugging Face token>
+```
 
 ## Finetune Models
 

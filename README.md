@@ -203,17 +203,34 @@ With reasoning:
 - DONE
 
 ## Pretrained Models
-```
+```bash
 uv add huggingface_hub transformers torch
 
 export HF_TOKEN=<your Hugging Face token>
 ```
 
 ## Finetune Models
+- Transformer (https://huggingface.co/docs/transformers/en/training)
+- Axolotl (https://github.com/axolotl-ai-cloud/axolotl.git)
+- LitGPT (https://github.com/Lightning-AI/litgpt.git)
+- Unsloth (https://unsloth.ai/docs/get-started/fine-tuning-llms-guide)
+- Llama Factory (https://github.com/hiyouga/LlamaFactory)
+- TorchTune (https://github.com/meta-pytorch/torchtune.git)
 
 ## LLM Evaluation
+- LangSmith (https://smith.langchain.com/)
+- RAGAS (https://docs.ragas.io/en/stable/)
+- Pydantic Evals (https://pydantic.dev/logfire/evals)
+- LLM-as-a-Judge (https://deepeval.com/docs/metrics-llm-evals)
+- DeepEval (https://github.com/confident-ai/deepeval.git)
+- MlFlow (https://mlflow.org/llm-evaluation)
 
 ## LLM Deployment
+- vLLM (https://github.com/vllm-project/vllm.git)
+- SGLang (https://github.com/sgl-project/sglang.git)
+- llama.cpp (https://github.com/ggml-org/llama.cpp.git)
+- litellm (https://github.com/BerriAI/litellm.git)
+- skypilot (https://github.com/skypilot-org/skypilot.git)
 
 
 ## References

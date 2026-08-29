@@ -26,6 +26,29 @@ requires = ["uv_build>=0.12.1,<0.13.0"]
 build-backend = "uv_build"
 
 [tool.uv]
+# Force a lock that covers Intel Mac, Apple Silicon, Linux, and Windows.
+# Intel Mac needs this so uv keeps torch 2.2.x (last x86_64 macOS wheels).
 required-environments = [
-    "sys_platform == 'darwin' and platform_machine == 'x86_64'"
+    "sys_platform == 'darwin' and platform_machine == 'x86_64'",
+    "sys_platform == 'darwin' and platform_machine == 'arm64'",
+    "sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "sys_platform == 'win32'",
 ]
+
+# PyTorch does not publish CUDA wheels for macOS. Use CUDA 13.0 on Linux and
+# Windows; macOS falls back to PyPI (MPS on Apple Silicon, CPU on Intel).
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cu130", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]
+torchvision = [
+    { index = "pytorch-cu130", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]
+torchaudio = [
+    { index = "pytorch-cu130", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cu130"
+url = "https://download.pytorch.org/whl/cu130"
+explicit = true

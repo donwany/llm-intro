@@ -219,9 +219,9 @@ export HF_TOKEN=<your Hugging Face token>
 ## Finetune Models
 - Unsloth (https://unsloth.ai/docs/get-started/fine-tuning-llms-guide) `[75.3K]`
 - Llama Factory (https://github.com/hiyouga/LlamaFactory) `[74.4K]`
+- Transformers Reinforcement Learning (TRL) (https://github.com/huggingface/trl) `[19.2K]`
 - LitGPT (https://github.com/Lightning-AI/litgpt.git) `[13.6K]`
 - Axolotl (https://github.com/axolotl-ai-cloud/axolotl.git) `[12.4K]`
-- Transformers Reinforcement Learning (TRL) (https://github.com/huggingface/trl) `[19.2K]`
 - TorchTune (https://github.com/meta-pytorch/torchtune.git) `[5.8K]`
 
 ## LLM Evaluation

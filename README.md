@@ -209,13 +209,20 @@ uv add huggingface_hub transformers torch
 export HF_TOKEN=<your Hugging Face token>
 ```
 
+## Creating Datasets
+- Easy-Dataset (https://github.com/ConardLi/easy-dataset) `[14.9K]`
+- DataFlow (https://github.com/OpenDCAI/DataFlow) `[7.8K]`
+- GraphGen (https://github.com/InternScience/GraphGen)
+- UnSloth Studio (https://unsloth.ai/docs/new/studio/install)
+
+
 ## Finetune Models
-- Transformer (https://huggingface.co/docs/transformers/en/training)
-- Axolotl (https://github.com/axolotl-ai-cloud/axolotl.git)
-- LitGPT (https://github.com/Lightning-AI/litgpt.git)
-- Unsloth (https://unsloth.ai/docs/get-started/fine-tuning-llms-guide)
-- Llama Factory (https://github.com/hiyouga/LlamaFactory)
-- TorchTune (https://github.com/meta-pytorch/torchtune.git)
+- Unsloth (https://unsloth.ai/docs/get-started/fine-tuning-llms-guide) `[75.3K]`
+- Llama Factory (https://github.com/hiyouga/LlamaFactory) `[74.4K]`
+- LitGPT (https://github.com/Lightning-AI/litgpt.git) `[13.6K]`
+- Axolotl (https://github.com/axolotl-ai-cloud/axolotl.git) `[12.4K]`
+- Transformers Reinforcement Learning (TRL) (https://github.com/huggingface/trl) `[19.2K]`
+- TorchTune (https://github.com/meta-pytorch/torchtune.git) `[5.8K]`
 
 ## LLM Evaluation
 - LangSmith (https://smith.langchain.com/)
@@ -226,11 +233,11 @@ export HF_TOKEN=<your Hugging Face token>
 - MlFlow (https://mlflow.org/llm-evaluation)
 
 ## LLM Deployment
-- vLLM (https://github.com/vllm-project/vllm.git)
-- SGLang (https://github.com/sgl-project/sglang.git)
-- llama.cpp (https://github.com/ggml-org/llama.cpp.git)
-- litellm (https://github.com/BerriAI/litellm.git)
-- skypilot (https://github.com/skypilot-org/skypilot.git)
+- llama.cpp (https://github.com/ggml-org/llama.cpp.git) `[127K]`
+- vLLM (https://github.com/vllm-project/vllm.git) `[90.6K]`
+- litellm (https://github.com/BerriAI/litellm.git) `[57.7K]`
+- SGLang (https://github.com/sgl-project/sglang.git) `[33K]`
+- skypilot (https://github.com/skypilot-org/skypilot.git) `[10.5K]`
 
 
 ## References

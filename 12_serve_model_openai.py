@@ -1,4 +1,5 @@
 # running vLLM inference with OpenAI API
+# uv add openai
 from openai import OpenAI
 
 

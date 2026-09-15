@@ -219,7 +219,7 @@ export HF_TOKEN=<your Hugging Face token>
 ## Finetune Models
 - Unsloth (https://unsloth.ai/docs/get-started/fine-tuning-llms-guide) `[75.3K]`
 - Llama Factory (https://github.com/hiyouga/LlamaFactory) `[74.4K]`
-- Transformers Reinforcement Learning (TRL) (https://github.com/huggingface/trl) `[19.2K]`
+- HuggingFace Transformers Reinforcement Learning (TRL) (https://github.com/huggingface/trl) `[19.2K]`
 - LitGPT (https://github.com/Lightning-AI/litgpt.git) `[13.6K]`
 - Axolotl (https://github.com/axolotl-ai-cloud/axolotl.git) `[12.4K]`
 - TorchTune (https://github.com/meta-pytorch/torchtune.git) `[5.8K]`
@@ -245,3 +245,52 @@ export HF_TOKEN=<your Hugging Face token>
 - https://arxiv.org/pdf/1706.03762
 - https://jalammar.github.io/illustrated-transformer/
 - https://github.com/openai/tiktoken
+
+
+
+```
+
+
+"lauki_qna": {
+    "hf_hub_url": "worldboss/lauki-qna",
+    "formatting": "sharegpt",
+    "columns": {
+      "messages": "messages"
+    }
+  },
+ "pif": {
+    "hf_hub_url": "worldboss/python-instructions-formatted",
+    "columns": {
+      "prompt": "input",
+      "response": "output"
+      }
+  },
+
+  ```
+
+# upload to huggingface
+```bash
+  llamafactory-cli export \
+    --model_name_or_path  Qwen/Qwen3.5-0.8B \
+    --adapter_name_or_path saves/qwen3.5-0.8B-lauki-pif-v2/lora/sft \
+    --export_dir saves/qwen3_sft_lauki-pif-v2-merged \
+
+    lmf export \
+      --model_name_or_path  Qwen/Qwen3.5-0.8B \
+      --adapter_name_or_path saves/qwen3.5-0.8B-lauki-pif-v2/lora/sft \
+      --export_dir saves/qwen3_sft_lauki-pif-v2-merged \
+
+# CLI
+hf repo create worldboss/qwen3_sft_lauki-pif-v2-merged-finetune --repo-type model
+
+# python, use this: upload.py
+from huggingface_hub import HfApi
+
+api = HfApi()
+
+api.upload_folder(
+    folder_path="saves/qwen3_sft_lauki-pif-v2-merged",
+    repo_id="worldboss/qwen3_sft_lauki-pif-v2-merged-finetune",
+    repo_type="model",
+)
+```

@@ -2,7 +2,10 @@
 # Run 15_prepare_alpaca_data.py first, then compare 16 vs 18 inference scripts.
 #
 # Requires an NVIDIA GPU. Unsloth is not supported on Apple Silicon.
-# uv add unsloth datasets transformers trl peft bitsandbytes
+# Do not use trl==0.22.2 (broken ConstantLengthDataset import).
+# uv pip install -U unsloth unsloth_zoo
+# uv pip install --no-deps trl==0.23.1
+# uv pip install transformers==4.56.2 datasets peft bitsandbytes
 # export HF_TOKEN=...   # optional, only used when PUSH_TO_HUB is True
 
 import os

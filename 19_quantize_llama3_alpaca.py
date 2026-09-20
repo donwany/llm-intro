@@ -6,7 +6,10 @@
 #   - GGUF for llama.cpp / Ollama (q8_0, f16, q4_k_m, q5_k_m)
 #
 # Requires an NVIDIA GPU. Unsloth is not supported on Apple Silicon.
-# uv add unsloth transformers
+# Do not use trl==0.22.2 (broken ConstantLengthDataset import).
+# uv pip install -U unsloth unsloth_zoo
+# uv pip install --no-deps trl==0.23.1
+# uv pip install transformers==4.56.2
 # export HF_TOKEN=...   # optional, only used when PUSH_TO_HUB is True
 
 import os

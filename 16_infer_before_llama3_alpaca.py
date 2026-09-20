@@ -2,7 +2,10 @@
 # Compare this output with 18_infer_after_llama3_alpaca.py.
 #
 # Requires an NVIDIA GPU. Unsloth is not supported on Apple Silicon.
-# uv add unsloth datasets transformers
+# Do not use trl==0.22.2 (broken ConstantLengthDataset import).
+# uv pip install -U unsloth unsloth_zoo
+# uv pip install --no-deps trl==0.23.1
+# uv pip install transformers==4.56.2 datasets
 
 from unsloth import FastLanguageModel
 import torch

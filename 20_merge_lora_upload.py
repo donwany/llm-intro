@@ -6,7 +6,10 @@
 # (no adapter files needed at inference time).
 #
 # Requires an NVIDIA GPU. Unsloth is not supported on Apple Silicon.
-# uv add unsloth transformers huggingface_hub
+# Do not use trl==0.22.2 (broken ConstantLengthDataset import).
+# uv pip install -U unsloth unsloth_zoo
+# uv pip install --no-deps trl==0.23.1
+# uv pip install transformers==4.56.2 huggingface_hub
 # export HF_TOKEN=...
 
 import os

@@ -1,21 +1,58 @@
 # Run inference on the base Llama 3.1 8B model BEFORE fine-tuning.
 # This file is self-contained. Copy only this script to the GPU machine.
 #
-# uv pip install trl==0.19.1 unsloth unsloth_zoo transformers datasets
+# Pin this stack before running (Unsloth + transformers 5.x do not mix here):
+#   uv pip install transformers==4.56.2 trl==0.19.1
+#   uv pip install unsloth unsloth_zoo datasets
 
-import trl.trainer.utils as _trl_utils
+import builtins
 from torch.utils.data import IterableDataset
 
-if not hasattr(_trl_utils, "ConstantLengthDataset"):
-    class ConstantLengthDataset(IterableDataset):
-        def __iter__(self):
-            return iter(())
+# Transformers 5 configs use these names inside exec()'d source.
+# Older Unsloth does not inject them, which raises NameError: auto_docstring.
+def _identity_decorator(*args, **kwargs):
+    def decorator(obj):
+        return obj
 
-    _trl_utils.ConstantLengthDataset = ConstantLengthDataset
+    if args and callable(args[0]) and not kwargs:
+        return args[0]
+    return decorator
+
+
+for _name in ("auto_docstring", "strict"):
+    if not hasattr(builtins, _name):
+        setattr(builtins, _name, _identity_decorator)
+if not hasattr(builtins, "interval"):
+    builtins.interval = lambda *args, **kwargs: args[0] if args else None
+
+# Older unsloth_zoo does: from trl.trainer.utils import ConstantLengthDataset
+# Patch it when that module is first imported, without importing TRL first.
+_real_import = builtins.__import__
+
+
+def _import(name, globals=None, locals=None, fromlist=(), level=0):
+    module = _real_import(name, globals, locals, fromlist, level)
+    target = None
+    if name == "trl.trainer.utils":
+        target = module
+    elif name == "trl.trainer" and fromlist and "utils" in fromlist:
+        target = getattr(module, "utils", None)
+    if target is not None and not hasattr(target, "ConstantLengthDataset"):
+        class ConstantLengthDataset(IterableDataset):
+            def __iter__(self):
+                return iter(())
+
+        target.ConstantLengthDataset = ConstantLengthDataset
+    return module
+
+
+builtins.__import__ = _import
+
+import unsloth  # noqa: F401  # Unsloth must be imported before transformers/trl/peft
+from unsloth import FastLanguageModel
 
 import torch
 from transformers import TextStreamer
-from unsloth import FastLanguageModel
 
 MODEL_NAME = "unsloth/Llama-3.1-8B"
 MAX_SEQ_LENGTH = 2048

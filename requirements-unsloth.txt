@@ -1,14 +1,12 @@
 # Compatible Unsloth stack for scripts 16-20.
-# TRL 0.20+ removed ConstantLengthDataset. TRL 0.22.2 is also broken.
-# Use TRL 0.23.1 with a current unsloth_zoo, or TRL 0.19.1 with an older unsloth_zoo.
+# Your installed unsloth_zoo still imports ConstantLengthDataset, so TRL
+# must be 0.19.1. Do not use 0.22.2 or 0.23.1 with that zoo version.
 #
-# uv pip install -r requirements-unsloth.txt
-# uv pip install --upgrade --force-reinstall --no-cache-dir unsloth unsloth_zoo
-# uv pip install --no-deps trl==0.23.1
+# uv pip install trl==0.19.1
 
 unsloth
 unsloth_zoo
-trl==0.23.1
+trl==0.19.1
 transformers==4.56.2
 datasets
 peft

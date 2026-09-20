@@ -4,9 +4,10 @@
 # Requires an NVIDIA GPU. Unsloth is not supported on Apple Silicon.
 # Do not use trl==0.22.2 (broken ConstantLengthDataset import).
 # uv pip install -U unsloth unsloth_zoo
-# uv pip install --no-deps trl==0.23.1
+# uv pip install trl==0.19.1
 # uv pip install transformers==4.56.2 datasets
 
+import unsloth_compat  # noqa: F401  # patch TRL before Unsloth
 from unsloth import FastLanguageModel
 import torch
 from transformers import TextStreamer

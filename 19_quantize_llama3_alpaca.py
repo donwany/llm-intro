@@ -65,7 +65,7 @@ HF_MERGED_4BIT_REPO = "worldboss/llama_finetune_4bit"
 HF_GGUF_REPO = "worldboss/llama_finetune"
 
 PUSH_TO_HUB = False
-SAVE_MERGED_16BIT = False
+SAVE_MERGED_16BIT = True  # required before GGUF; LoRA base_layer tensors cannot convert
 SAVE_MERGED_4BIT = False
 SAVE_GGUF_Q4_K_M = True
 SAVE_GGUF_Q8_0 = False
@@ -190,14 +190,84 @@ def ensure_llama_cpp() -> Path:
     return llama_cpp
 
 
+def find_llama_quantize(llama_cpp: Path) -> Path:
+    candidates = [
+        llama_cpp / "build" / "bin" / "llama-quantize",
+        llama_cpp / "llama-quantize",
+        llama_cpp / "quantize",
+        llama_cpp / "build" / "bin" / "quantize",
+    ]
+    for path in candidates:
+        if path.is_file() and os.access(path, os.X_OK):
+            return path
+    raise FileNotFoundError(
+        "Could not find llama-quantize. Rebuild llama.cpp, then rerun."
+    )
+
+
+def convert_merged_to_gguf(llama_cpp: Path) -> None:
+    """Merge LoRA first, then convert with llama.cpp.
+
+    Unsloth's save_pretrained_gguf fails on PEFT names like
+    model.layers.0.mlp.down_proj.base_layer.weight.
+    """
+    os.makedirs(GGUF_DIR, exist_ok=True)
+    convert_script = llama_cpp / "convert_hf_to_gguf.py"
+    if not convert_script.exists():
+        raise FileNotFoundError(f"Missing {convert_script}")
+
+    f16_path = Path(GGUF_DIR) / "llama_finetune-f16.gguf"
+    print(f"Converting merged Hugging Face weights to GGUF: {f16_path}")
+    subprocess.run(
+        [
+            sys.executable,
+            str(convert_script),
+            MERGED_16BIT_DIR,
+            "--outfile",
+            str(f16_path),
+            "--outtype",
+            "f16",
+        ],
+        check=True,
+    )
+
+    quantize_bin = find_llama_quantize(llama_cpp)
+    method_map = {
+        "q4_k_m": "Q4_K_M",
+        "q8_0": "Q8_0",
+        "q5_k_m": "Q5_K_M",
+        "f16": None,
+    }
+
+    for method in GGUF_METHODS:
+        llama_type = method_map[method]
+        if llama_type is None:
+            print(f"F16 GGUF already written to {f16_path}")
+            continue
+        out_path = Path(GGUF_DIR) / f"llama_finetune-{method}.gguf"
+        print(f"Quantizing {f16_path} -> {out_path} ({llama_type})")
+        subprocess.run(
+            [str(quantize_bin), str(f16_path), str(out_path), llama_type],
+            check=True,
+        )
+        print(f"Finished {method}: {out_path}")
+        print()
+
+
 print("=" * 60)
 print("GGUF / LLAMA.CPP QUANTIZATION")
 print("=" * 60)
 
 if not GGUF_METHODS:
     print("No GGUF methods enabled. Set one of SAVE_GGUF_* = True.")
+elif not os.path.isdir(MERGED_16BIT_DIR):
+    raise FileNotFoundError(
+        f"Merged 16-bit weights not found at {MERGED_16BIT_DIR}. "
+        "Set SAVE_MERGED_16BIT = True and rerun. LoRA adapters cannot be "
+        "converted to GGUF until they are merged into the base model."
+    )
 else:
-    ensure_llama_cpp()
+    llama_cpp = ensure_llama_cpp()
     print("Quant methods:")
     print("  q8_0   - fast conversion, larger file, high quality")
     print("  q5_k_m - recommended higher-quality GGUF")
@@ -206,24 +276,17 @@ else:
     print()
     print(f"Exporting: {', '.join(GGUF_METHODS)}")
     print()
-
-    for method in GGUF_METHODS:
-        print(f"Saving GGUF ({method}) to: {GGUF_DIR}")
-        model.save_pretrained_gguf(
-            GGUF_DIR,
-            tokenizer,
-            quantization_method=method,
-        )
-        print(f"Finished {method}")
-        print()
+    convert_merged_to_gguf(llama_cpp)
 
     if PUSH_TO_HUB:
-        print(f"Uploading GGUF files to: {HF_GGUF_REPO}")
-        model.push_to_hub_gguf(
-            HF_GGUF_REPO,
-            tokenizer,
-            quantization_method=GGUF_METHODS,
-            token=hf_token,
+        from huggingface_hub import HfApi
+
+        api = HfApi(token=hf_token)
+        api.create_repo(repo_id=HF_GGUF_REPO, repo_type="model", exist_ok=True)
+        api.upload_folder(
+            folder_path=GGUF_DIR,
+            repo_id=HF_GGUF_REPO,
+            repo_type="model",
         )
         print(f"Uploaded GGUF model to: {HF_GGUF_REPO}")
         print()

@@ -47,6 +47,10 @@ model, tokenizer = FastLanguageModel.from_pretrained(
 
 FastLanguageModel.for_inference(model)
 
+if tokenizer.pad_token_id is None:
+    tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.pad_token_id = tokenizer.eos_token_id
+
 print(f"Loaded fine-tuned adapters from: {LORA_DIR}")
 print()
 
@@ -66,7 +70,9 @@ def generate(instruction: str, input_text: str, max_new_tokens: int = 128) -> st
         **inputs,
         streamer=text_streamer,
         max_new_tokens=max_new_tokens,
-        use_cache=True,
+        use_cache=False,
+        pad_token_id=tokenizer.pad_token_id,
+        eos_token_id=tokenizer.eos_token_id,
     )
     return tokenizer.batch_decode(outputs)[0]
 

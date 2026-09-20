@@ -7,7 +7,9 @@
 
 import importlib.metadata
 import os
+import subprocess
 import sys
+from pathlib import Path
 
 
 def _require_compatible_versions() -> None:
@@ -151,6 +153,43 @@ else:
     print()
 
 
+def ensure_llama_cpp() -> Path:
+    """Unsloth GGUF export needs a local llama.cpp build in this folder."""
+    llama_cpp = Path("llama.cpp")
+    if not llama_cpp.exists():
+        print("Cloning llama.cpp into the model save folder...")
+        subprocess.run(
+            [
+                "git",
+                "clone",
+                "--recursive",
+                "https://github.com/ggerganov/llama.cpp",
+            ],
+            check=True,
+        )
+    else:
+        print(f"Found existing llama.cpp at {llama_cpp.resolve()}")
+
+    print("Building llama.cpp (make clean && make all -j)...")
+    subprocess.run(["make", "clean"], cwd=llama_cpp, check=False)
+    make_all = subprocess.run(
+        ["make", "all", f"-j{os.cpu_count() or 4}"],
+        cwd=llama_cpp,
+    )
+    if make_all.returncode != 0:
+        print("make all failed; trying CMake build...")
+        subprocess.run(["cmake", "-B", "build"], cwd=llama_cpp, check=True)
+        subprocess.run(
+            ["cmake", "--build", "build", "--config", "Release", "-j"],
+            cwd=llama_cpp,
+            check=True,
+        )
+
+    print("llama.cpp is ready.")
+    print()
+    return llama_cpp
+
+
 print("=" * 60)
 print("GGUF / LLAMA.CPP QUANTIZATION")
 print("=" * 60)
@@ -158,6 +197,7 @@ print("=" * 60)
 if not GGUF_METHODS:
     print("No GGUF methods enabled. Set one of SAVE_GGUF_* = True.")
 else:
+    ensure_llama_cpp()
     print("Quant methods:")
     print("  q8_0   - fast conversion, larger file, high quality")
     print("  q5_k_m - recommended higher-quality GGUF")

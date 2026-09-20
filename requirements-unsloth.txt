@@ -1,13 +1,14 @@
 # Compatible Unsloth stack for scripts 16-20.
-# Your installed unsloth_zoo still imports ConstantLengthDataset, so TRL
-# must be 0.19.1. Do not use 0.22.2 or 0.23.1 with that zoo version.
+# Transformers 5.x breaks this Unsloth build (auto_docstring NameError).
+# TRL 0.20+ breaks older unsloth_zoo (ConstantLengthDataset ImportError).
 #
-# uv pip install trl==0.19.1
+# uv pip install transformers==4.56.2 trl==0.19.1
+# uv pip install unsloth unsloth_zoo datasets peft bitsandbytes accelerate huggingface_hub
 
+transformers==4.56.2
+trl==0.19.1
 unsloth
 unsloth_zoo
-trl==0.19.1
-transformers==4.56.2
 datasets
 peft
 bitsandbytes

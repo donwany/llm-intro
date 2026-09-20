@@ -34,8 +34,8 @@ HF_USERNAME = "worldboss"
 HF_LORA_REPO = f"{HF_USERNAME}/llama_lora"
 HF_MERGED_16BIT_REPO = f"{HF_USERNAME}/llama_finetune_16bit"
 HF_MERGED_4BIT_REPO = f"{HF_USERNAME}/llama_finetune_4bit"
-HF_GGUF_REPO = f"{HF_USERNAME}/Llama-3.1-8B_finetune_Q4_K_M"
-GGUF_FILENAME = "unsloth.Q4_K_M.gguf"
+HF_GGUF_REPO = f"{HF_USERNAME}/llama_finetune"
+GGUF_FILENAME = "llama_finetune-q4_k_m.gguf"
 
 LORA_R = 16
 LORA_ALPHA = 16

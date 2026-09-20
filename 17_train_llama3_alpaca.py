@@ -1,42 +1,85 @@
 # Fine-tune Llama 3.1 8B with Unsloth LoRA on the Alpaca dataset.
-# Run 15_prepare_alpaca_data.py first, then compare 16 vs 18 inference scripts.
+# Self-contained. Copy this script to the GPU machine.
 #
-# Requires an NVIDIA GPU. Unsloth is not supported on Apple Silicon.
-# Do not use trl==0.22.2 (broken ConstantLengthDataset import).
-# uv pip install -U unsloth unsloth_zoo
-# uv pip install trl==0.19.1
-# uv pip install transformers==4.56.2 datasets peft bitsandbytes
-# export HF_TOKEN=...   # optional, only used when PUSH_TO_HUB is True
+# uv run syncs pyproject.toml and will undo version pins.
+# Always use --no-sync after pinning:
+#
+#   uv pip install transformers==4.56.2 trl==0.19.1
+#   uv run --no-sync 17_train_llama3_alpaca.py
 
+import importlib.metadata
 import os
+import sys
 
+
+def _require_compatible_versions() -> None:
+    transformers_version = importlib.metadata.version("transformers")
+    trl_version = importlib.metadata.version("trl")
+    print(f"transformers={transformers_version}")
+    print(f"trl={trl_version}")
+
+    transformers_major = int(transformers_version.split(".")[0])
+    if transformers_major >= 5:
+        sys.exit(
+            "\nThis Unsloth build needs transformers 4.56.2, not 5.x.\n"
+            "You ran `uv run` without --no-sync, so it reinstalled packages\n"
+            "from pyproject.toml (see 'Uninstalled 4 packages').\n\n"
+            "  uv pip install transformers==4.56.2 trl==0.19.1\n"
+            "  uv run --no-sync 17_train_llama3_alpaca.py\n"
+        )
+
+
+_require_compatible_versions()
+
+from unsloth import FastLanguageModel
 import torch
-from datasets import load_from_disk
+from datasets import load_dataset, load_from_disk
+from transformers.configuration_utils import PretrainedConfig
 from trl import SFTConfig, SFTTrainer
 
-from alpaca_common import (
-    DTYPE,
-    HF_LORA_REPO,
-    LOAD_IN_4BIT,
-    LORA_ALPHA,
-    LORA_DIR,
-    LORA_DROPOUT,
-    LORA_R,
-    LORA_TARGET_MODULES,
-    MAX_SEQ_LENGTH,
-    MODEL_NAME,
-    OUTPUT_DIR,
-    PREPARED_DATA_DIR,
-    patch_config_torch_dtype,
-    patch_trl_constant_length_dataset,
-)
 
-patch_trl_constant_length_dataset()
-from unsloth import FastLanguageModel
+def _patch_config_torch_dtype() -> None:
+    original_to_dict = PretrainedConfig.to_dict
 
-patch_config_torch_dtype()
+    def to_dict_with_torch_dtype(self, *args, **kwargs):
+        data = original_to_dict(self, *args, **kwargs)
+        if "torch_dtype" not in data:
+            data["torch_dtype"] = (
+                data.get("dtype")
+                or getattr(self, "torch_dtype", None)
+                or getattr(self, "dtype", None)
+                or "bfloat16"
+            )
+        return data
 
+    PretrainedConfig.to_dict = to_dict_with_torch_dtype
+
+
+_patch_config_torch_dtype()
+
+MODEL_NAME = "unsloth/Llama-3.1-8B"
+MAX_SEQ_LENGTH = 2048
+DTYPE = None
+LOAD_IN_4BIT = True
+PREPARED_DATA_DIR = "./alpaca-prepared"
+LORA_DIR = "./llama_lora"
+OUTPUT_DIR = "./outputs"
+HF_LORA_REPO = "worldboss/llama_lora"
 PUSH_TO_HUB = False
+
+LORA_R = 16
+LORA_ALPHA = 16
+LORA_DROPOUT = 0
+LORA_TARGET_MODULES = [
+    "q_proj",
+    "k_proj",
+    "v_proj",
+    "o_proj",
+    "gate_proj",
+    "up_proj",
+    "down_proj",
+]
+
 MAX_STEPS = 60
 PER_DEVICE_TRAIN_BATCH_SIZE = 2
 GRADIENT_ACCUMULATION_STEPS = 4
@@ -44,6 +87,17 @@ LEARNING_RATE = 2e-4
 WARMUP_STEPS = 5
 LOGGING_STEPS = 1
 SEED = 3407
+
+ALPACA_PROMPT = """Below is an instruction that describes a task, paired with an input that provides further context. Write a response that appropriately completes the request.
+
+### Instruction:
+{}
+
+### Input:
+{}
+
+### Response:
+{}"""
 
 
 print("=" * 60)
@@ -83,16 +137,31 @@ print()
 
 
 print("=" * 60)
-print("LOADING PREPARED DATASET")
+print("LOADING DATASET")
 print("=" * 60)
 
-if not os.path.isdir(PREPARED_DATA_DIR):
-    raise FileNotFoundError(
-        f"Prepared dataset not found at {PREPARED_DATA_DIR}. "
-        "Run 15_prepare_alpaca_data.py first."
-    )
+if os.path.isdir(PREPARED_DATA_DIR):
+    dataset = load_from_disk(PREPARED_DATA_DIR)
+    print(f"Loaded prepared dataset from: {PREPARED_DATA_DIR}")
+else:
+    eos_token = tokenizer.eos_token
 
-dataset = load_from_disk(PREPARED_DATA_DIR)
+    def formatting_prompts_func(examples):
+        texts = []
+        for instruction, input_text, output in zip(
+            examples["instruction"],
+            examples["input"],
+            examples["output"],
+        ):
+            texts.append(
+                ALPACA_PROMPT.format(instruction, input_text, output) + eos_token
+            )
+        return {"text": texts}
+
+    dataset = load_dataset("unsloth/alpaca-cleaned", split="train")
+    dataset = dataset.map(formatting_prompts_func, batched=True)
+    print("Prepared data not found; formatted unsloth/alpaca-cleaned in memory.")
+
 print(dataset)
 print("Training examples:", len(dataset))
 print()
@@ -126,8 +195,10 @@ trainer = SFTTrainer(
 )
 
 print(f"max_steps={MAX_STEPS}")
-print(f"effective batch size="
-      f"{PER_DEVICE_TRAIN_BATCH_SIZE * GRADIENT_ACCUMULATION_STEPS}")
+print(
+    "effective batch size="
+    f"{PER_DEVICE_TRAIN_BATCH_SIZE * GRADIENT_ACCUMULATION_STEPS}"
+)
 print()
 
 
@@ -193,6 +264,4 @@ if PUSH_TO_HUB:
 print("=" * 60)
 print("TRAINING FINISHED")
 print("=" * 60)
-print("Next: python 18_infer_after_llama3_alpaca.py")
-print("Then: python 20_merge_lora_upload.py")
-print("Or:   python 19_quantize_llama3_alpaca.py")
+print("Next: uv run --no-sync 18_infer_after_llama3_alpaca.py")

@@ -4,9 +4,9 @@
 # Requires an NVIDIA GPU. Unsloth is not supported on Apple Silicon.
 # uv add unsloth datasets transformers
 
+from unsloth import FastLanguageModel
 import torch
 from transformers import TextStreamer
-from unsloth import FastLanguageModel
 
 from alpaca_common import (
     DTYPE,

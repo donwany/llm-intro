@@ -1,43 +1,66 @@
 # Merge LoRA adapters into the pretrained Llama 3.1 8B weights and
 # upload the full model to Hugging Face.
+# Self-contained. Copy this script to the GPU machine.
 #
-# LoRA stores only small adapter matrices. Merging writes those updates
-# back into the base model so the result is a standalone checkpoint
-# (no adapter files needed at inference time).
-#
-# Requires an NVIDIA GPU. Unsloth is not supported on Apple Silicon.
-# Do not use trl==0.22.2 (broken ConstantLengthDataset import).
-# uv pip install -U unsloth unsloth_zoo
-# uv pip install trl==0.19.1
-# uv pip install transformers==4.56.2 huggingface_hub
-# export HF_TOKEN=...
+#   uv pip install transformers==4.56.2 trl==0.19.1
+#   export HF_TOKEN=...
+#   uv run --no-sync 20_merge_lora_upload.py
 
+import importlib.metadata
 import os
+import sys
 
-from huggingface_hub import HfApi
 
-from alpaca_common import (
-    DTYPE,
-    HF_MERGED_16BIT_REPO,
-    LOAD_IN_4BIT,
-    LORA_DIR,
-    MAX_SEQ_LENGTH,
-    MERGED_16BIT_DIR,
-    MODEL_NAME,
-    patch_config_torch_dtype,
-    patch_trl_constant_length_dataset,
-)
+def _require_compatible_versions() -> None:
+    transformers_version = importlib.metadata.version("transformers")
+    trl_version = importlib.metadata.version("trl")
+    print(f"transformers={transformers_version}")
+    print(f"trl={trl_version}")
 
-patch_trl_constant_length_dataset()
+    transformers_major = int(transformers_version.split(".")[0])
+    if transformers_major >= 5:
+        sys.exit(
+            "\nThis Unsloth build needs transformers 4.56.2, not 5.x.\n"
+            "Re-pin, then run with --no-sync:\n\n"
+            "  uv pip install transformers==4.56.2 trl==0.19.1\n"
+            "  uv run --no-sync 20_merge_lora_upload.py\n"
+        )
+
+
+_require_compatible_versions()
+
 from unsloth import FastLanguageModel
+from huggingface_hub import HfApi
+from transformers.configuration_utils import PretrainedConfig
 
-patch_config_torch_dtype()
 
-# "merged_16bit" is the usual Hugging Face / vLLM export.
-# Use "merged_4bit" only if you specifically want an int4 checkpoint.
+def _patch_config_torch_dtype() -> None:
+    original_to_dict = PretrainedConfig.to_dict
+
+    def to_dict_with_torch_dtype(self, *args, **kwargs):
+        data = original_to_dict(self, *args, **kwargs)
+        if "torch_dtype" not in data:
+            data["torch_dtype"] = (
+                data.get("dtype")
+                or getattr(self, "torch_dtype", None)
+                or getattr(self, "dtype", None)
+                or "bfloat16"
+            )
+        return data
+
+    PretrainedConfig.to_dict = to_dict_with_torch_dtype
+
+
+_patch_config_torch_dtype()
+
+MODEL_NAME = "unsloth/Llama-3.1-8B"
+MAX_SEQ_LENGTH = 2048
+DTYPE = None
+LOAD_IN_4BIT = True
+LORA_DIR = "./llama_lora"
+MERGED_DIR = "./llama_finetune_16bit"
+REPO_ID = "worldboss/llama_finetune_16bit"
 SAVE_METHOD = "merged_16bit"
-REPO_ID = HF_MERGED_16BIT_REPO
-MERGED_DIR = MERGED_16BIT_DIR
 
 
 print("=" * 60)

@@ -1,32 +1,84 @@
 # Run inference on the fine-tuned Llama 3.1 8B LoRA adapters AFTER training.
-# Compare this output with 16_infer_before_llama3_alpaca.py.
+# Self-contained. Copy this script to the GPU machine.
 #
-# Requires an NVIDIA GPU. Unsloth is not supported on Apple Silicon.
-# Do not use trl==0.22.2 (broken ConstantLengthDataset import).
-# uv pip install -U unsloth unsloth_zoo
-# uv pip install trl==0.19.1
-# uv pip install transformers==4.56.2 datasets
+#   uv pip install transformers==4.56.2 trl==0.19.1
+#   uv run --no-sync 18_infer_after_llama3_alpaca.py
 
+import importlib.metadata
 import os
+import sys
 
+
+def _require_compatible_versions() -> None:
+    transformers_version = importlib.metadata.version("transformers")
+    trl_version = importlib.metadata.version("trl")
+    print(f"transformers={transformers_version}")
+    print(f"trl={trl_version}")
+
+    transformers_major = int(transformers_version.split(".")[0])
+    if transformers_major >= 5:
+        sys.exit(
+            "\nThis Unsloth build needs transformers 4.56.2, not 5.x.\n"
+            "Re-pin, then run with --no-sync:\n\n"
+            "  uv pip install transformers==4.56.2 trl==0.19.1\n"
+            "  uv run --no-sync 18_infer_after_llama3_alpaca.py\n"
+        )
+
+
+_require_compatible_versions()
+
+from unsloth import FastLanguageModel
 import torch
 from transformers import TextStreamer
+from transformers.configuration_utils import PretrainedConfig
 
-from alpaca_common import (
-    DTYPE,
-    LOAD_IN_4BIT,
-    LORA_DIR,
-    MAX_SEQ_LENGTH,
-    SAMPLE_PROMPTS,
-    format_alpaca_prompt,
-    patch_config_torch_dtype,
-    patch_trl_constant_length_dataset,
-)
 
-patch_trl_constant_length_dataset()
-from unsloth import FastLanguageModel
+def _patch_config_torch_dtype() -> None:
+    original_to_dict = PretrainedConfig.to_dict
 
-patch_config_torch_dtype()
+    def to_dict_with_torch_dtype(self, *args, **kwargs):
+        data = original_to_dict(self, *args, **kwargs)
+        if "torch_dtype" not in data:
+            data["torch_dtype"] = (
+                data.get("dtype")
+                or getattr(self, "torch_dtype", None)
+                or getattr(self, "dtype", None)
+                or "bfloat16"
+            )
+        return data
+
+    PretrainedConfig.to_dict = to_dict_with_torch_dtype
+
+
+_patch_config_torch_dtype()
+
+MAX_SEQ_LENGTH = 2048
+DTYPE = None
+LOAD_IN_4BIT = True
+LORA_DIR = "./llama_lora"
+
+ALPACA_PROMPT = """Below is an instruction that describes a task, paired with an input that provides further context. Write a response that appropriately completes the request.
+
+### Instruction:
+{}
+
+### Input:
+{}
+
+### Response:
+{}"""
+
+SAMPLE_PROMPTS = [
+    {
+        "instruction": "Continue the fibonacci sequence.",
+        "input": "1, 1, 2, 3, 5, 8",
+    },
+    {
+        "instruction": "What is a famous tall tower in Paris?",
+        "input": "",
+    },
+]
+
 
 print("=" * 60)
 print("LOADING FINE-TUNED MODEL (AFTER TRAINING)")
@@ -56,7 +108,7 @@ print()
 
 
 def generate(instruction: str, input_text: str, max_new_tokens: int = 128) -> str:
-    prompt = format_alpaca_prompt(instruction, input_text, "")
+    prompt = ALPACA_PROMPT.format(instruction, input_text, "")
     inputs = tokenizer([prompt], return_tensors="pt").to("cuda")
 
     print("-" * 60)

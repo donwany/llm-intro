@@ -1,47 +1,70 @@
-# Quantize the fine-tuned Llama 3.1 8B model for deployment.
+# Quantize the fine-tuned Llama 3.1 8B model for GGUF / merged export.
+# Self-contained. Copy this script to the GPU machine.
 #
-# Supported exports from the original Unsloth Alpaca notebook:
-#   - merged float16 weights (vLLM / Hugging Face)
-#   - merged 4-bit weights
-#   - GGUF for llama.cpp / Ollama (q8_0, f16, q4_k_m, q5_k_m)
-#
-# Requires an NVIDIA GPU. Unsloth is not supported on Apple Silicon.
-# Do not use trl==0.22.2 (broken ConstantLengthDataset import).
-# uv pip install -U unsloth unsloth_zoo
-# uv pip install trl==0.19.1
-# uv pip install transformers==4.56.2
-# export HF_TOKEN=...   # optional, only used when PUSH_TO_HUB is True
+#   uv pip install transformers==4.56.2 trl==0.19.1
+#   uv run --no-sync 19_quantize_llama3_alpaca.py
+#   export HF_TOKEN=...   # only if PUSH_TO_HUB is True
 
+import importlib.metadata
 import os
+import sys
 
-from alpaca_common import (
-    DTYPE,
-    GGUF_DIR,
-    HF_GGUF_REPO,
-    HF_MERGED_16BIT_REPO,
-    HF_MERGED_4BIT_REPO,
-    LOAD_IN_4BIT,
-    LORA_DIR,
-    MAX_SEQ_LENGTH,
-    MERGED_16BIT_DIR,
-    MERGED_4BIT_DIR,
-    patch_config_torch_dtype,
-    patch_trl_constant_length_dataset,
-)
 
-patch_trl_constant_length_dataset()
+def _require_compatible_versions() -> None:
+    transformers_version = importlib.metadata.version("transformers")
+    trl_version = importlib.metadata.version("trl")
+    print(f"transformers={transformers_version}")
+    print(f"trl={trl_version}")
+
+    transformers_major = int(transformers_version.split(".")[0])
+    if transformers_major >= 5:
+        sys.exit(
+            "\nThis Unsloth build needs transformers 4.56.2, not 5.x.\n"
+            "Re-pin, then run with --no-sync:\n\n"
+            "  uv pip install transformers==4.56.2 trl==0.19.1\n"
+            "  uv run --no-sync 19_quantize_llama3_alpaca.py\n"
+        )
+
+
+_require_compatible_versions()
+
 from unsloth import FastLanguageModel
+from transformers.configuration_utils import PretrainedConfig
 
-patch_config_torch_dtype()
+
+def _patch_config_torch_dtype() -> None:
+    original_to_dict = PretrainedConfig.to_dict
+
+    def to_dict_with_torch_dtype(self, *args, **kwargs):
+        data = original_to_dict(self, *args, **kwargs)
+        if "torch_dtype" not in data:
+            data["torch_dtype"] = (
+                data.get("dtype")
+                or getattr(self, "torch_dtype", None)
+                or getattr(self, "dtype", None)
+                or "bfloat16"
+            )
+        return data
+
+    PretrainedConfig.to_dict = to_dict_with_torch_dtype
+
+
+_patch_config_torch_dtype()
+
+MAX_SEQ_LENGTH = 2048
+DTYPE = None
+LOAD_IN_4BIT = True
+LORA_DIR = "./llama_lora"
+MERGED_16BIT_DIR = "./llama_finetune_16bit"
+MERGED_4BIT_DIR = "./llama_finetune_4bit"
+GGUF_DIR = "./llama_finetune"
+HF_MERGED_16BIT_REPO = "worldboss/llama_finetune_16bit"
+HF_MERGED_4BIT_REPO = "worldboss/llama_finetune_4bit"
+HF_GGUF_REPO = "worldboss/llama_finetune"
 
 PUSH_TO_HUB = False
-
-# Hugging Face / vLLM merged checkpoints
 SAVE_MERGED_16BIT = False
 SAVE_MERGED_4BIT = False
-
-# GGUF / llama.cpp
-# q4_k_m is the usual local-deploy default: smaller than q8_0, better quality than q4_0.
 SAVE_GGUF_Q4_K_M = True
 SAVE_GGUF_Q8_0 = False
 SAVE_GGUF_F16 = False

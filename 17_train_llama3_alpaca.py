@@ -158,7 +158,7 @@ else:
             )
         return {"text": texts}
 
-    dataset = load_dataset("unsloth/alpaca-cleaned", split="train").select(range(1000))
+    dataset = load_dataset("unsloth/alpaca-cleaned", split="train")
     dataset = dataset.map(formatting_prompts_func, batched=True)
     print("Prepared data not found; formatted unsloth/alpaca-cleaned in memory.")
 

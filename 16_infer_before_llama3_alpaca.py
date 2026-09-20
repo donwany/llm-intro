@@ -1,56 +1,35 @@
 # Run inference on the base Llama 3.1 8B model BEFORE fine-tuning.
 # This file is self-contained. Copy only this script to the GPU machine.
 #
-# Pin this stack before running (Unsloth + transformers 5.x do not mix here):
+# uv run syncs pyproject.toml and will undo version pins.
+# Install pins, then run WITHOUT sync:
+#
 #   uv pip install transformers==4.56.2 trl==0.19.1
-#   uv pip install unsloth unsloth_zoo datasets
+#   uv run --no-sync 16_infer_before_llama3_alpaca.py
 
-import builtins
-from torch.utils.data import IterableDataset
-
-# Transformers 5 configs use these names inside exec()'d source.
-# Older Unsloth does not inject them, which raises NameError: auto_docstring.
-def _identity_decorator(*args, **kwargs):
-    def decorator(obj):
-        return obj
-
-    if args and callable(args[0]) and not kwargs:
-        return args[0]
-    return decorator
+import importlib.metadata
+import sys
 
 
-for _name in ("auto_docstring", "strict"):
-    if not hasattr(builtins, _name):
-        setattr(builtins, _name, _identity_decorator)
-if not hasattr(builtins, "interval"):
-    builtins.interval = lambda *args, **kwargs: args[0] if args else None
+def _require_compatible_versions() -> None:
+    transformers_version = importlib.metadata.version("transformers")
+    trl_version = importlib.metadata.version("trl")
+    print(f"transformers={transformers_version}")
+    print(f"trl={trl_version}")
 
-# Older unsloth_zoo does: from trl.trainer.utils import ConstantLengthDataset
-# Patch it when that module is first imported, without importing TRL first.
-_real_import = builtins.__import__
-
-
-def _import(name, globals=None, locals=None, fromlist=(), level=0):
-    module = _real_import(name, globals, locals, fromlist, level)
-    target = None
-    if name == "trl.trainer.utils":
-        target = module
-    elif name == "trl.trainer" and fromlist and "utils" in fromlist:
-        target = getattr(module, "utils", None)
-    if target is not None and not hasattr(target, "ConstantLengthDataset"):
-        class ConstantLengthDataset(IterableDataset):
-            def __iter__(self):
-                return iter(())
-
-        target.ConstantLengthDataset = ConstantLengthDataset
-    return module
+    transformers_major = int(transformers_version.split(".")[0])
+    if transformers_major >= 5:
+        sys.exit(
+            "\nThis Unsloth build needs transformers 4.56.2, not 5.x.\n"
+            "uv run reinstalls packages from pyproject.toml unless you pass --no-sync.\n\n"
+            "  uv pip install transformers==4.56.2 trl==0.19.1\n"
+            "  uv run --no-sync 16_infer_before_llama3_alpaca.py\n"
+        )
 
 
-builtins.__import__ = _import
+_require_compatible_versions()
 
-import unsloth  # noqa: F401  # Unsloth must be imported before transformers/trl/peft
 from unsloth import FastLanguageModel
-
 import torch
 from transformers import TextStreamer
 

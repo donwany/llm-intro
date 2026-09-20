@@ -12,10 +12,7 @@
 # uv pip install transformers==4.56.2
 # export HF_TOKEN=...   # optional, only used when PUSH_TO_HUB is True
 
-import unsloth_compat  # noqa: F401  # patch TRL before Unsloth
 import os
-
-from unsloth import FastLanguageModel
 
 from alpaca_common import (
     DTYPE,
@@ -28,7 +25,11 @@ from alpaca_common import (
     MAX_SEQ_LENGTH,
     MERGED_16BIT_DIR,
     MERGED_4BIT_DIR,
+    patch_trl_constant_length_dataset,
 )
+
+patch_trl_constant_length_dataset()
+from unsloth import FastLanguageModel
 
 PUSH_TO_HUB = False
 

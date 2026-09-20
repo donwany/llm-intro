@@ -12,11 +12,9 @@
 # uv pip install transformers==4.56.2 huggingface_hub
 # export HF_TOKEN=...
 
-import unsloth_compat  # noqa: F401  # patch TRL before Unsloth
 import os
 
 from huggingface_hub import HfApi
-from unsloth import FastLanguageModel
 
 from alpaca_common import (
     DTYPE,
@@ -26,7 +24,11 @@ from alpaca_common import (
     MAX_SEQ_LENGTH,
     MERGED_16BIT_DIR,
     MODEL_NAME,
+    patch_trl_constant_length_dataset,
 )
+
+patch_trl_constant_length_dataset()
+from unsloth import FastLanguageModel
 
 # "merged_16bit" is the usual Hugging Face / vLLM export.
 # Use "merged_4bit" only if you specifically want an int4 checkpoint.

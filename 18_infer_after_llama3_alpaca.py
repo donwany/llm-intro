@@ -7,12 +7,10 @@
 # uv pip install trl==0.19.1
 # uv pip install transformers==4.56.2 datasets
 
-import unsloth_compat  # noqa: F401  # patch TRL before Unsloth
 import os
 
 import torch
 from transformers import TextStreamer
-from unsloth import FastLanguageModel
 
 from alpaca_common import (
     DTYPE,
@@ -21,7 +19,11 @@ from alpaca_common import (
     MAX_SEQ_LENGTH,
     SAMPLE_PROMPTS,
     format_alpaca_prompt,
+    patch_trl_constant_length_dataset,
 )
+
+patch_trl_constant_length_dataset()
+from unsloth import FastLanguageModel
 
 print("=" * 60)
 print("LOADING FINE-TUNED MODEL (AFTER TRAINING)")

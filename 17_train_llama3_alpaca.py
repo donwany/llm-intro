@@ -8,13 +8,11 @@
 # uv pip install transformers==4.56.2 datasets peft bitsandbytes
 # export HF_TOKEN=...   # optional, only used when PUSH_TO_HUB is True
 
-import unsloth_compat  # noqa: F401  # patch TRL before Unsloth
 import os
 
 import torch
 from datasets import load_from_disk
 from trl import SFTConfig, SFTTrainer
-from unsloth import FastLanguageModel
 
 from alpaca_common import (
     DTYPE,
@@ -29,7 +27,11 @@ from alpaca_common import (
     MODEL_NAME,
     OUTPUT_DIR,
     PREPARED_DATA_DIR,
+    patch_trl_constant_length_dataset,
 )
+
+patch_trl_constant_length_dataset()
+from unsloth import FastLanguageModel
 
 PUSH_TO_HUB = False
 MAX_STEPS = 60

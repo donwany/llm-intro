@@ -1,5 +1,21 @@
 """Shared settings for Llama 3.1 8B Alpaca fine-tuning scripts."""
 
+
+def patch_trl_constant_length_dataset() -> None:
+    """Older unsloth_zoo imports ConstantLengthDataset, removed in TRL 0.20."""
+    from torch.utils.data import IterableDataset
+    import trl.trainer.utils as trl_utils
+
+    if hasattr(trl_utils, "ConstantLengthDataset"):
+        return
+
+    class ConstantLengthDataset(IterableDataset):
+        def __iter__(self):
+            return iter(())
+
+    trl_utils.ConstantLengthDataset = ConstantLengthDataset
+
+
 MODEL_NAME = "unsloth/Llama-3.1-8B"
 MAX_SEQ_LENGTH = 2048
 DTYPE = None  # auto-detect: float16 on Tesla T4/V100, bfloat16 on Ampere+

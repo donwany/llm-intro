@@ -75,3 +75,23 @@ SAMPLE_PROMPTS = [
 
 def format_alpaca_prompt(instruction: str, input_text: str, output: str = "") -> str:
     return ALPACA_PROMPT.format(instruction, input_text, output)
+
+
+def patch_config_torch_dtype() -> None:
+    """Transformers 4.56+ stores dtype; Unsloth 2025.7.2 still reads torch_dtype."""
+    from transformers.configuration_utils import PretrainedConfig
+
+    original_to_dict = PretrainedConfig.to_dict
+
+    def to_dict_with_torch_dtype(self, *args, **kwargs):
+        data = original_to_dict(self, *args, **kwargs)
+        if "torch_dtype" not in data:
+            data["torch_dtype"] = (
+                data.get("dtype")
+                or getattr(self, "torch_dtype", None)
+                or getattr(self, "dtype", None)
+                or "bfloat16"
+            )
+        return data
+
+    PretrainedConfig.to_dict = to_dict_with_torch_dtype

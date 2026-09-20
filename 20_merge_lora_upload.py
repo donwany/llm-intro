@@ -24,11 +24,14 @@ from alpaca_common import (
     MAX_SEQ_LENGTH,
     MERGED_16BIT_DIR,
     MODEL_NAME,
+    patch_config_torch_dtype,
     patch_trl_constant_length_dataset,
 )
 
 patch_trl_constant_length_dataset()
 from unsloth import FastLanguageModel
+
+patch_config_torch_dtype()
 
 # "merged_16bit" is the usual Hugging Face / vLLM export.
 # Use "merged_4bit" only if you specifically want an int4 checkpoint.

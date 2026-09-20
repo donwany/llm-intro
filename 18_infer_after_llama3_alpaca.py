@@ -19,11 +19,14 @@ from alpaca_common import (
     MAX_SEQ_LENGTH,
     SAMPLE_PROMPTS,
     format_alpaca_prompt,
+    patch_config_torch_dtype,
     patch_trl_constant_length_dataset,
 )
 
 patch_trl_constant_length_dataset()
 from unsloth import FastLanguageModel
+
+patch_config_torch_dtype()
 
 print("=" * 60)
 print("LOADING FINE-TUNED MODEL (AFTER TRAINING)")

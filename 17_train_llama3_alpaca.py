@@ -27,11 +27,14 @@ from alpaca_common import (
     MODEL_NAME,
     OUTPUT_DIR,
     PREPARED_DATA_DIR,
+    patch_config_torch_dtype,
     patch_trl_constant_length_dataset,
 )
 
 patch_trl_constant_length_dataset()
 from unsloth import FastLanguageModel
+
+patch_config_torch_dtype()
 
 PUSH_TO_HUB = False
 MAX_STEPS = 60

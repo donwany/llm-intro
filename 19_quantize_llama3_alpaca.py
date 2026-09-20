@@ -25,11 +25,14 @@ from alpaca_common import (
     MAX_SEQ_LENGTH,
     MERGED_16BIT_DIR,
     MERGED_4BIT_DIR,
+    patch_config_torch_dtype,
     patch_trl_constant_length_dataset,
 )
 
 patch_trl_constant_length_dataset()
 from unsloth import FastLanguageModel
+
+patch_config_torch_dtype()
 
 PUSH_TO_HUB = False
 

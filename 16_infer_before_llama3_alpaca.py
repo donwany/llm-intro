@@ -32,6 +32,28 @@ _require_compatible_versions()
 from unsloth import FastLanguageModel
 import torch
 from transformers import TextStreamer
+from transformers.configuration_utils import PretrainedConfig
+
+
+def _patch_config_torch_dtype() -> None:
+    """Transformers 4.56+ stores dtype; Unsloth 2025.7.2 still reads torch_dtype."""
+    original_to_dict = PretrainedConfig.to_dict
+
+    def to_dict_with_torch_dtype(self, *args, **kwargs):
+        data = original_to_dict(self, *args, **kwargs)
+        if "torch_dtype" not in data:
+            data["torch_dtype"] = (
+                data.get("dtype")
+                or getattr(self, "torch_dtype", None)
+                or getattr(self, "dtype", None)
+                or "bfloat16"
+            )
+        return data
+
+    PretrainedConfig.to_dict = to_dict_with_torch_dtype
+
+
+_patch_config_torch_dtype()
 
 MODEL_NAME = "unsloth/Llama-3.1-8B"
 MAX_SEQ_LENGTH = 2048

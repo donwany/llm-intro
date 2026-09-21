@@ -29,6 +29,24 @@ def _require_compatible_versions() -> None:
 
 _require_compatible_versions()
 
+import types
+
+
+def _stub_missing_vllm_modules() -> None:
+    for name in (
+        "vllm.model_executor.layers.quantization.bitsandbytes",
+        "vllm.model_executor.model_loader.bitsandbytes_loader",
+    ):
+        if name in sys.modules:
+            continue
+        try:
+            __import__(name)
+        except Exception:
+            sys.modules[name] = types.ModuleType(name)
+
+
+_stub_missing_vllm_modules()
+
 from unsloth import FastLanguageModel
 import torch
 from transformers import TextStreamer

@@ -30,27 +30,12 @@ def _require_compatible_versions() -> None:
 
 _require_compatible_versions()
 
-import types
-
-
-def _stub_missing_vllm_modules() -> None:
-    """Unsloth Zoo imports vLLM bitsandbytes internals if vLLM is installed.
-
-    GGUF export does not need vLLM. Stub missing modules so Unsloth can import.
-    """
-    for name in (
-        "vllm.model_executor.layers.quantization.bitsandbytes",
-        "vllm.model_executor.model_loader.bitsandbytes_loader",
-    ):
-        if name in sys.modules:
-            continue
-        try:
-            __import__(name)
-        except Exception:
-            sys.modules[name] = types.ModuleType(name)
-
-
-_stub_missing_vllm_modules()
+# Hide vLLM from Unsloth. GGUF export does not need it, and this vLLM
+# build is missing quantization.bitsandbytes so Unsloth Zoo crashes.
+for _name in list(sys.modules):
+    if _name == "vllm" or _name.startswith("vllm."):
+        del sys.modules[_name]
+sys.modules["vllm"] = None
 
 from unsloth import FastLanguageModel
 from transformers.configuration_utils import PretrainedConfig
